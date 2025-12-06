@@ -1,0 +1,5 @@
+[project]
+name = "PO_O_Problema_Do_Poeta"
+version = "0.1.0"
+requires-python = ">= 3.13.9"
+dependencies = []

@@ -1,40 +1,107 @@
 ---
-title: "Lumo: a clean Quarto template for stunning data reports"
-subtitle: "This document showcases how a Quarto report made using the <code>Lumo</code> format looks like. It also demoes a few tips and tricks I 💜"
+title: "01: O problema do poeta - Solução básica"
+subtitle: "Modelagem e solução do problema do poeta utilizando a formulação básica, sem generalização"
 format:
   lumo-html: 
-    logo: "logo.png"                                     # Optional. Path to a logo displayed above the title
-    github-repo: "https://github.com/holtzy/lumo"        # Optional. Adds a github corner at the top right
+    # logo: "logo.png"                                     # Optional. Path to a logo displayed above the title
+    github-repo: "https://github.com/maykongpedro/PO_O_Problema_Do_Poeta"        # Optional. Adds a github corner at the top right
     primary-color: "#69b3a2"
     self-contained: true
     is-particlejs-enabled: true                          # Optional: display interactive particles in the document header
     bg-image: ""                                         # Optional: link to an image for the header background
-author: Holtz Yan
+author: Maykon Pedro
 date: last-modified
 ---
 
+## Introdução
 
+Nesse primeiro documento o problema será resolvido de maneira simplificada, alocando cada valor e restrição diretamente no código, sem pensar em escalonamento dos dados ou formulação genérica.
 
+## Descrição do problema
 
-## Introduction
+Um poeta possui **40 ha de Pinus e 50 ha de floresta nativa**. Nos últimos 10 anos, o manejo do Pinus gerou **R\$ 36.000** com **800 dias de trabalho**, e o manejo da floresta nativa gerou **R\$ 60.000** com **1.500 dias de trabalho**.
 
-Quarto is probably my favorite tool in the R/Python universe. Transforming your code and thoughts into a stunning report in one click always blows my mind.
+Ele quer **maximizar a receita anual**, mas pode dedicar no máximo **180 dias/ano** ao manejo. Determine **quantos hectares de cada floresta** ele deve manejar por ano para obter a maior receita possível, respeitando os limites de área disponíveis.
 
-While the default Quarto appearance **looks great**, there are [a few tweaks](https://www.productive-r-workflow.com/quarto-tricks) I always apply to elevate the report even further. Rather than manually adding them each time, I bundled everything into a custom format called `lumo`.
-
-
-::: {.column-margin}
-
-Btw, you can learn how to master Quarto thanks to my online course: [Productive R Workflow](https://www.productive-r-workflow.com)
-
+::: column-margin
+Esse é um enunciado simplificado do problema. A versão original pode ser consultada nos documentos do projeto.
 :::
 
+## Resumo dos dados
 
-This document aims at showcasing how a quarto document made with the `lumo` format looks like.
+**Florestas**:
 
+$$
+\begin{aligned}
+&\text{Pinus} = 40_{ha} \\
+&\text{Nativa} = 50_{ha}
+\end{aligned}
+$$
 
-## Documentation
+**Receita anual por floresta:**
 
-The documentation for this quarto custom format is available [here](https://www.productive-r-workflow.com/r/bonus/lumo-quarto-template)
+$$
+\begin{aligned}
+\text{Receita do Pinus}& = \text{R\$ } 36.000  \div  10_\text{anos} \div 40_{ha} \\
+\text{Receita do Pinus}& = \text{R\$} 90_{ha/ano}
+\end{aligned}
+$$
 
+$$
+\begin{aligned}
+\text{Receita da Nativa}& = \text{R\$ } 60.000  \div  10_\text{anos} \div 50_{ha} \\
+\text{Receita da Nativa}& = \text{R\$} 120_{ha/ano}
+\end{aligned}
+$$
 
+**Restrições de tempo de manejo por floresta:**
+
+$$
+\begin{aligned}
+\text{Manejo do Pinus}& = 800_{dias}  \div  40_{ha} \div 10_\text{anos} \\
+\text{Manejo do Pinus}& = 2_{dias/ha/ano}
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
+\text{Manejo de Nativa}& = 1500_{dias}  \div  50_{ha} \div 10_\text{anos} \\
+\text{Manejo de Nativa}& = 3_{dias/ha/ano}
+\end{aligned}
+$$
+
+## Formulação
+
+### Índices/Conjuntos
+
+### Parâmetros
+
+### Variáveis de decisão
+
+### Função objetivo
+
+### Restrições
+
+## Resolução do problema
+
+### 1. Importar bibliotecas
+
+### 2. Importar e definir solver
+
+### 3. Declarar modelo
+
+### 4. Declarar índices, parâmetros e variáveis de decisão
+
+### 4.1 Índices
+
+### 4.2 Parâmetros
+
+### 4.3 Variáveis de decisão
+
+### 5. Declarar função objetivo
+
+### 6. Declarar restrições
+
+### 7. Resolver modelo
+
+### 8. Exportar resultados

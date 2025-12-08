@@ -9,6 +9,8 @@ format:
     self-contained: true
     is-particlejs-enabled: true                          # Optional: display interactive particles in the document header
     bg-image: ""                                         # Optional: link to an image for the header background
+    code-fold: false     # <<<<<<<<<< SEMPRE MOSTRAR OS CÓDIGOS
+    code-tools: true     # (opcional) botões p/ copiar
 author: Maykon Pedro
 date: last-modified
 ---
@@ -86,22 +88,91 @@ $$
 
 ### 1. Importar bibliotecas
 
+```{python}
+import pyomo.environ as pyo
+```
+
 ### 2. Importar e definir solver
 
+```{python}
+
+# o executável foi instalado via terminal e o python consegue encontrá-lo nativaemente
+solver = pyo.SolverFactory("glpk")
+
+# o executável foi baixado no computador
+# caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
+# solver = pyo.SolverFactory(
+#     _name="glpk", 
+#     executable=caminho_do_executavel
+# )
+```
+
 ### 3. Declarar modelo
+
+```{python}
+modelo = pyo.ConcreteModel()
+```
 
 ### 4. Declarar índices, parâmetros e variáveis de decisão
 
 ### 4.1 Índices
+Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
 
 ### 4.2 Parâmetros
+Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
 
 ### 4.3 Variáveis de decisão
+```{python}
+modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals)
+modelo.x2_area_nativa = pyo.Var(within=pyo.NonNegativeReals)
+```
 
 ### 5. Declarar função objetivo
 
+```{python}
+modelo.fo_z_receita = pyo.Objective(
+  expr=90 * modelo.x1_area_pinus + 120 * modelo.x2_area_nativa, sense=pyo.maximize
+)
+```
+
 ### 6. Declarar restrições
+
+```{python}
+modelo.restricao_tempo_disp = pyo.Constraint(
+  expr=2 * modelo.x1_area_pinus + 3 * modelo.x2_area_nativa <= 180
+)
+
+modelo.restricao_area_pinus = pyo.Constraint(expr=modelo.x1_area_pinus <= 40)
+
+modelo.restricao_area_nativas = pyo.Constraint(expr=modelo.x2_area_nativa <= 50)
+```
 
 ### 7. Resolver modelo
 
+```{python}
+# dando uma olhada na construção do modelo
+modelo.pprint()
+```
+
+```{python}
+# usando o solver para resolver o modelo
+resultado = solver.solve(modelo)
+```
+
 ### 8. Exportar resultados
+
+```{python}
+# resultados brutos do modelo
+resultado.write
+```
+
+
+```{python}
+# resultados organizados
+print("\n===== RESULTADOS DO MODELO =====")
+print(f"Status da otimização: {resultado.solver.status}")
+print(f"Condição de término: {resultado.solver.termination_condition}")
+print(f"Receita máxima (z) = R${pyo.value(modelo.fo_z_receita):.2f}")
+print(f"Área manejada de Pinus (x1) = {modelo.x1_area_pinus.value:.2f} hectares")
+print(f"Área manejada de Nativa (x2) = {modelo.x2_area_nativa.value:.2f} hectares")
+```

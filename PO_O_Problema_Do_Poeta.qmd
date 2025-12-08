@@ -80,11 +80,59 @@ $$
 
 ### Variáveis de decisão
 
+Pensando que a maximização da receita do Poeta está diretamente ligada ao preço recebido por floresta e à quantidade de hectares manejados, o item que pode ser alterado pensando no cenário ótimo, é a área a ser manejada para cada floresta. Sendo assim, as variáveis de decisão serão:
+
+-   $x_1 \colon \text{número de hectares de floresta de Pinus a serem manejados}$
+-   $x_2 \colon \text{número de hectares de floresta nativas a serem manejadas}$
+
 ### Função objetivo
+
+Tendo como guia a maximização da receita anual (aqui chamaremos de Z), teremos que usar as receitas anualizadas para cada tipo de floresta (calculadas no tópico Resumo dos dados"). Assim, têm-se:
+
+$\max z = 90x_1 + 120x_2$
+
+A receita de pinus (R\$90 ha/ano) multiplicado pela área a ser manejada de pinus ($x_1$ ) irá gerar a receita total desse gênero. Somado isso com a receita da nativa (R\$120 ha/ano) multiplicado pela respectiva área, nos retorna a receita total das florestas do Poeta.
 
 ### Restrições
 
+Devemos começar com a limitação de área para floresta, não temos como manejar mais hectares do que o disponível:
+
+-   $x_1 ≤ 40 \text{ ha de floresta de Pinus}$
+-   $x_2 ≤ 50 \text{ ha de floresta nativa}$
+
+Após, precisamos checar no enunciado que o Poeta expressou sua vontade de não trabalhar mais que 180 dias por ano. Como calculamos o tempo gasto para cada floresta no tópico de resumo de dados, podemos chegar na seguint expressão matemática para representar a relação entre tempo de manejo x tempo máximo do poeta:
+
+$$
+2x_1 + 3x_2 \leq 180
+$$
+
+Sendo 2 dias/ha/ano para o pinus ($x_1$ ) e 3 dias/ha/ano para a nativa ($x_2$ ).
+
+Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas:
+$$
+\begin{align*}
+x_1 &\geq 0 \\
+x_2 &\geq 0 
+\end{align*}
+$$
+
 ## Resolução do problema
+
+### 0. Dados de entrada
+
+```{python}
+# dicionário de receita por tipo de floresta
+receita = {"pinus": 90, "nativa": 120}
+
+# dicionário de área máxima por tipo de floresta
+area_max = {"pinus": 40, "nativa": 50}
+
+# dicionário para limitar os recursos, no caso, o tempo de dias do poeta
+recurso_max = {"tempo": 180}
+
+# dicionário para controle do tempo gasto de manejo por floresta no ano
+tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}}
+```
 
 ### 1. Importar bibliotecas
 
@@ -95,16 +143,12 @@ import pyomo.environ as pyo
 ### 2. Importar e definir solver
 
 ```{python}
-
 # o executável foi instalado via terminal e o python consegue encontrá-lo nativaemente
-solver = pyo.SolverFactory("glpk")
+# solver = pyo.SolverFactory("glpk")
 
 # o executável foi baixado no computador
-# caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
-# solver = pyo.SolverFactory(
-#     _name="glpk", 
-#     executable=caminho_do_executavel
-# )
+caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
+solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
 ```
 
 ### 3. Declarar modelo
@@ -116,12 +160,15 @@ modelo = pyo.ConcreteModel()
 ### 4. Declarar índices, parâmetros e variáveis de decisão
 
 ### 4.1 Índices
+
 Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
 
 ### 4.2 Parâmetros
+
 Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
 
 ### 4.3 Variáveis de decisão
+
 ```{python}
 modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals)
 modelo.x2_area_nativa = pyo.Var(within=pyo.NonNegativeReals)
@@ -131,7 +178,8 @@ modelo.x2_area_nativa = pyo.Var(within=pyo.NonNegativeReals)
 
 ```{python}
 modelo.fo_z_receita = pyo.Objective(
-  expr=90 * modelo.x1_area_pinus + 120 * modelo.x2_area_nativa, sense=pyo.maximize
+  expr = receita['pinus'] * modelo.x1_area_pinus + receita['nativa'] * modelo.x2_area_nativa, 
+  sense = pyo.maximize
 )
 ```
 
@@ -139,12 +187,15 @@ modelo.fo_z_receita = pyo.Objective(
 
 ```{python}
 modelo.restricao_tempo_disp = pyo.Constraint(
-  expr=2 * modelo.x1_area_pinus + 3 * modelo.x2_area_nativa <= 180
+  expr= 
+  tempo_por_manejo['tempo']['pinus'] * modelo.x1_area_pinus + 
+  tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa 
+  <= recurso_max['tempo']
 )
 
-modelo.restricao_area_pinus = pyo.Constraint(expr=modelo.x1_area_pinus <= 40)
+modelo.restricao_area_pinus = pyo.Constraint(expr=modelo.x1_area_pinus <= area_max['pinus'])
 
-modelo.restricao_area_nativas = pyo.Constraint(expr=modelo.x2_area_nativa <= 50)
+modelo.restricao_area_nativas = pyo.Constraint(expr=modelo.x2_area_nativa <= area_max['nativa'])
 ```
 
 ### 7. Resolver modelo
@@ -165,7 +216,6 @@ resultado = solver.solve(modelo)
 # resultados brutos do modelo
 resultado.write
 ```
-
 
 ```{python}
 # resultados organizados

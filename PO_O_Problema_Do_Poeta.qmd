@@ -2,15 +2,18 @@
 title: "01: O problema do poeta - Solução básica"
 subtitle: "Modelagem e solução do problema do poeta utilizando a formulação básica, sem generalização"
 format:
-  lumo-html: 
-    # logo: "logo.png"                                     # Optional. Path to a logo displayed above the title
-    github-repo: "https://github.com/maykongpedro/PO_O_Problema_Do_Poeta"        # Optional. Adds a github corner at the top right
-    primary-color: "#69b3a2"
+  html: 
+    theme: lumen
+    toc: true
+    toc-title: Contents
+    toc-location: left
     self-contained: true
-    is-particlejs-enabled: true                          # Optional: display interactive particles in the document header
-    bg-image: ""                                         # Optional: link to an image for the header background
     code-fold: false     # <<<<<<<<<< SEMPRE MOSTRAR OS CÓDIGOS
     code-tools: true     # (opcional) botões p/ copiar
+    # code-annotations: below
+    number-sections: true
+code-annotations: below
+# code-annotations: hover
 author: Maykon Pedro
 date: last-modified
 ---
@@ -108,8 +111,7 @@ $$
 
 Sendo 2 dias/ha/ano para o pinus ($x_1$ ) e 3 dias/ha/ano para a nativa ($x_2$ ).
 
-Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas:
-$$
+Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas: $$
 \begin{align*}
 x_1 &\geq 0 \\
 x_2 &\geq 0 
@@ -118,7 +120,7 @@ $$
 
 ## Resolução do problema
 
-### 0. Dados de entrada
+### Dados de entrada
 
 ```{python}
 # dicionário de receita por tipo de floresta
@@ -134,47 +136,49 @@ recurso_max = {"tempo": 180}
 tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}}
 ```
 
-### 1. Importar bibliotecas
+### Importar bibliotecas
 
 ```{python}
-import pyomo.environ as pyo
+import pyomo.environ as pyo # <1>
 ```
 
-### 2. Importar e definir solver
+1.  Usamos um "alias" para importar todos os módulos do pyomo, assim podemos acessar as funções e métodos diretamente chamando `pyo`
+
+### Importar e definir solver
 
 ```{python}
 # o executável foi instalado via terminal e o python consegue encontrá-lo nativaemente
-# solver = pyo.SolverFactory("glpk")
+solver = pyo.SolverFactory("glpk")
 
 # o executável foi baixado no computador
-caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
-solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
+# caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
+# solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
 ```
 
-### 3. Declarar modelo
+### Declarar modelo
 
 ```{python}
 modelo = pyo.ConcreteModel()
 ```
 
-### 4. Declarar índices, parâmetros e variáveis de decisão
+### Declarar índices, parâmetros e variáveis de decisão
 
-### 4.1 Índices
-
-Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
-
-### 4.2 Parâmetros
+### Índices
 
 Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
 
-### 4.3 Variáveis de decisão
+### Parâmetros
+
+Não utilizado nesse capítulo, pois trata-se de uma formulação direta.
+
+### Variáveis de decisão
 
 ```{python}
 modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals)
 modelo.x2_area_nativa = pyo.Var(within=pyo.NonNegativeReals)
 ```
 
-### 5. Declarar função objetivo
+### Declarar função objetivo
 
 ```{python}
 modelo.fo_z_receita = pyo.Objective(
@@ -183,7 +187,7 @@ modelo.fo_z_receita = pyo.Objective(
 )
 ```
 
-### 6. Declarar restrições
+### Declarar restrições
 
 ```{python}
 modelo.restricao_tempo_disp = pyo.Constraint(
@@ -198,7 +202,7 @@ modelo.restricao_area_pinus = pyo.Constraint(expr=modelo.x1_area_pinus <= area_m
 modelo.restricao_area_nativas = pyo.Constraint(expr=modelo.x2_area_nativa <= area_max['nativa'])
 ```
 
-### 7. Resolver modelo
+### Resolver modelo
 
 ```{python}
 # dando uma olhada na construção do modelo
@@ -210,7 +214,7 @@ modelo.pprint()
 resultado = solver.solve(modelo)
 ```
 
-### 8. Exportar resultados
+### Exportar resultados
 
 ```{python}
 # resultados brutos do modelo
@@ -225,4 +229,8 @@ print(f"Condição de término: {resultado.solver.termination_condition}")
 print(f"Receita máxima (z) = R${pyo.value(modelo.fo_z_receita):.2f}")
 print(f"Área manejada de Pinus (x1) = {modelo.x1_area_pinus.value:.2f} hectares")
 print(f"Área manejada de Nativa (x2) = {modelo.x2_area_nativa.value:.2f} hectares")
+```
+
+```{python}
+modelo.write('modelo.mps', io_options={"symbolic_solver_labels": True})
 ```

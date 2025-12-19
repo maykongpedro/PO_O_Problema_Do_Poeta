@@ -96,7 +96,7 @@ $\max z = 90x_1 + 120x_2$
 
 A receita de pinus (R\$90 ha/ano) multiplicado pela área a ser manejada de pinus ($x_1$ ) irá gerar a receita total desse gênero. Somado isso com a receita da nativa (R\$120 ha/ano) multiplicado pela respectiva área, nos retorna a receita total das florestas do Poeta.
 
-### Restrições
+### Restrições {#topico-restricoes}
 
 Devemos começar com a limitação de área para floresta, não temos como manejar mais hectares do que o disponível:
 
@@ -124,17 +124,22 @@ $$
 
 ```{python}
 # dicionário de receita por tipo de floresta
-receita = {"pinus": 90, "nativa": 120}
+receita = {"pinus": 90, "nativa": 120} # <1>
 
 # dicionário de área máxima por tipo de floresta
-area_max = {"pinus": 40, "nativa": 50}
+area_max = {"pinus": 40, "nativa": 50} # <2>
 
 # dicionário para limitar os recursos, no caso, o tempo de dias do poeta
-recurso_max = {"tempo": 180}
+recurso_max = {"tempo": 180} # <3>
 
 # dicionário para controle do tempo gasto de manejo por floresta no ano
-tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}}
+tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}} # <4>
 ```
+
+1.  No Python, temos diversas maneiras de importar e trabalhar com os dados. Para facilitar nosso trabalho com a biblioteca de otimização (*pyomo*), iremos usar uma forma de dados essencial do Python: o dicionário. Aqui, o que estamos fazendo é basicamente uma lista que relaciona uma chave (key) x uma informação. A chave `pinus` irá trazer o valor `90`, por exemplo. Podemos acessar ela com `receita['pinus']`
+2.  Na área máxima, a ideia é a mesma, a *key* (chave) `pinus` irá trazer o valor `40`, ou seja, 40 hectares é a área máxima da floresta de pinus.
+3.  Para o recurso, a *key* `tempo` irá trazer o valor referente aos `180` dias.
+4.  Nosso último dicionário de dados possui uma segunda camada, onde acessamos a *key* `tempo`, e dentro dela temos outro dicionário, onde temos o tempo gasto para o manejo de cada floresta. Para acessar os dados, buscamos primeiro pela chave 1, e depois a chave 2, da seguinte maneira: `tempo_por_manejo['tempo'['pinus']`, esse código irá retornar `2`, que é a quantidade de dias dedicado ao manejo do gênero pinus.
 
 ### Importar bibliotecas
 
@@ -142,7 +147,7 @@ tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}}
 import pyomo.environ as pyo # <1>
 ```
 
-1.  Usamos um "alias" para importar todos os módulos do pyomo, assim podemos acessar as funções e métodos diretamente chamando `pyo`
+1.  A biblioteca de otimização que iremos usar é o *Pyomo*. Usamos um "alias" para importar todos os módulos da biblioteca, assim podemos acessar as funções e métodos diretamente chamando `pyo`. Por exemplo, chamados `pyo.ConcreteModel()` para criar um modelo em branco.
 
 ### Importar e definir solver
 
@@ -189,18 +194,46 @@ modelo.fo_z_receita = pyo.Objective(
 
 ### Declarar restrições
 
+#### Área máxima para a floresta de pinus
+
 ```{python}
-modelo.restricao_tempo_disp = pyo.Constraint(
-  expr= 
-  tempo_por_manejo['tempo']['pinus'] * modelo.x1_area_pinus + 
-  tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa 
-  <= recurso_max['tempo']
+modelo.restricao_area_pinus = pyo.Constraint(     # <1>
+  expr=modelo.x1_area_pinus <= area_max['pinus']  # <2>
 )
 
-modelo.restricao_area_pinus = pyo.Constraint(expr=modelo.x1_area_pinus <= area_max['pinus'])
-
-modelo.restricao_area_nativas = pyo.Constraint(expr=modelo.x2_area_nativa <= area_max['nativa'])
 ```
+
+1.  Acessando o objeto `modelo`, criamos um novo item dentro dele chamado `restricao_area_pinus`, e para construir a restrição buscamos a função `Constraint` dentro da biblitoeca do `pyomo`.
+2.  Dentro da função, é onde escrevemos usando python a restrição que foi montanda usando a linguagem matemática no tópico de [restrições](#restrições): $x_1 ≤ 40$ . Aqui, a variável $x_1$ é representada por `modelo.x1_area_pinus`, e os 40 hectares de limite, são representados diretamente pelo valor do dicionário `area_max['pinus']`
+
+#### Área máxima para a floresta nativa
+
+```{python}
+modelo.restricao_area_nativas = pyo.Constraint(       # <1>
+  expr=modelo.x2_area_nativa <= area_max['nativa']    # <2>
+)
+```
+
+1.  Seguindo a lógica da restrição anterior, aqui criamos um novo item chamado `restricao_area_nativas`.
+2.  Para escrever a restrição, a única coisa que precisamos mudar em relação à primeira, é a variável de decisão desejada e o item que queremos do dicionário: `modelo.x2_area_nativa` e `area_max['nativa']`, respectivamente. Esse último sendo a forma que optamos para representar o valor de 50 hectares de limite para a floresta nativa.
+
+#### Tempo limite de manejo para cada floresta
+
+```{python}
+modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
+  expr= 
+  tempo_por_manejo['tempo']['pinus'] * modelo.x1_area_pinus + # <2>
+  tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa  # <3>
+  <= recurso_max['tempo']                                     # <4>
+)
+
+
+```
+
+1.  Primeiro criamos o item restricao_tempo_disp dentro do modelo
+2.  Dentro da função, iremos representar a primeira parte da equação: $2x_1 + 3x_2 \leq 180$. O código `tempo_por_manejo['tempo']['pinus']` obtém o valor `2`, e a operação de multiplicação com `modelo.x1_area_pinus`, fecha a expressão $2x_1$
+3.  Agora representamos o $3x_2$, com o código `tempo_por_manejo['tempo']['nativa']` obtemos o valor `3`, e para representar a variável de decisão $x_2$, usamos `modelo.x2_area_nativa`
+4.  Finalizamos a equação usando o mesmo sinal da matemática - o símbolo de menor ou igual - e acessamos o valor de 180 dias diretamente do dicionário `recurso_max` usando a *key* `'tempo'`
 
 ### Resolver modelo
 

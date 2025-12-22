@@ -1,0 +1,248 @@
+---
+title: "01: O problema do poeta - Solução básica"
+subtitle: "Modelagem e solução do problema do poeta utilizando a formulação básica, sem generalização"
+format:
+  html: 
+    theme: lumen
+    toc: true
+    toc-title: Contents
+    toc-location: left
+    self-contained: true
+    code-fold: false     # <<<<<<<<<< SEMPRE MOSTRAR OS CÓDIGOS
+    code-tools: true     # (opcional) botões p/ copiar
+    # code-annotations: below
+    number-sections: true
+code-annotations: below
+# code-annotations: hover
+author: Maykon Pedro
+date: last-modified
+---
+
+## Introdução
+
+Nesse primeiro documento o problema será resolvido de maneira simplificada, alocando cada valor e restrição diretamente no código, sem pensar em escalonamento dos dados ou formulação genérica.
+
+## Descrição do problema
+
+Um poeta possui **40 ha de Pinus e 50 ha de floresta nativa**. Nos últimos 10 anos, o manejo do Pinus gerou **R\$ 36.000** com **800 dias de trabalho**, e o manejo da floresta nativa gerou **R\$ 60.000** com **1.500 dias de trabalho**.
+
+Ele quer **maximizar a receita anual**, mas pode dedicar no máximo **180 dias/ano** ao manejo. Determine **quantos hectares de cada floresta** ele deve manejar por ano para obter a maior receita possível, respeitando os limites de área disponíveis.
+
+::: column-margin
+Esse é um enunciado simplificado do problema. A versão original pode ser consultada nos documentos do projeto.
+:::
+
+## Resumo dos dados
+
+Todos os valores foram convertidos para a base **hectare por ano (ha·ano)**, facilitando a formulação do modelo de programação linear.
+
+| Floresta | Área disponível (ha) | Receita (R\$/ha·ano) | Dias de manejo (dias/ha·ano) |
+|------------------|------------------|------------------|-------------------|
+| Pinus | 40 | 90 | 2 |
+| Nativa | 50 | 120 | 3 |
+
+**Recurso total disponível:**
+
+-   Tempo máximo de manejo: **180 dias/ano**
+
+## Formulação
+
+### Índices/Conjuntos
+
+### Parâmetros
+
+### Variáveis de decisão
+
+Pensando que a maximização da receita do Poeta está diretamente ligada ao preço recebido por floresta e à quantidade de hectares manejados, o item que pode ser alterado pensando no cenário ótimo, é a área a ser manejada para cada floresta. Sendo assim, as variáveis de decisão serão:
+
+$$
+\begin{aligned}
+x_1 &:\ \text{número de hectares de floresta de pinus a serem manejados} \\
+x_2 &:\ \text{número de hectares de florestas nativas a serem manejadas}
+\end{aligned}
+$$
+
+### Função objetivo
+
+Tendo como guia a maximização da receita anual (aqui chamaremos de Z), teremos que usar as receitas anualizadas para cada tipo de floresta (calculadas no tópico Resumo dos dados"). Assim, têm-se:
+
+$$
+\max z = 90x_1 + 120x_2
+$$
+
+### Restrições {#topico-restricoes}
+
+Devemos começar com a limitação de área para floresta, não temos como manejar mais hectares do que o disponível: $$
+\begin{aligned}
+x_1 &\leq 40 \quad \text{(ha de floresta de pinus)} \\
+x_2 &\leq 50 \quad \text{(ha de floresta nativa)}
+\end{aligned}
+$$
+
+Após, precisamos checar no enunciado que há uma restrição de tempo máximo de trabalho por ano. Como calculamos o tempo gasto para cada floresta no tópico de resumo de dados, podemos chegar na seguinte expressão matemática para representar a relação entre tempo de manejo x tempo máximo do poeta: $$
+2x_1 + 3x_2 \leq 180
+$$
+
+Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas: 
+
+$$
+\begin{align*}
+x_1 &\geq 0 \\
+x_2 &\geq 0 
+\end{align*}
+$$
+
+## Resolução do problema
+
+### Dados de entrada
+
+```{python}
+# dicionário de receita por tipo de floresta
+receita = {"pinus": 90, "nativa": 120} # <1>
+
+# dicionário de área máxima por tipo de floresta
+area_max = {"pinus": 40, "nativa": 50} # <2>
+
+# dicionário para limitar os recursos, no caso, o tempo de dias do poeta
+recurso_max = {"tempo": 180} # <3>
+
+# dicionário para controle do tempo gasto de manejo por floresta no ano
+tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}} # <4>
+```
+
+1.  No Python, temos diversas maneiras de importar e trabalhar com os dados. Para facilitar nosso trabalho com a biblioteca de otimização (*pyomo*), iremos usar uma forma de dados essencial do Python: o dicionário. Aqui, o que estamos fazendo é basicamente uma lista que relaciona uma chave (key) x uma informação. A chave `pinus` irá trazer o valor `90`, por exemplo. Podemos acessar ela com `receita['pinus']`
+2.  Na área máxima, a ideia é a mesma, a *key* (chave) `pinus` irá trazer o valor `40`, ou seja, 40 hectares é a área máxima da floresta de pinus.
+3.  Para o recurso, a *key* `tempo` irá trazer o valor referente aos `180` dias.
+4.  Nosso último dicionário de dados possui uma segunda camada, onde acessamos a *key* `tempo`, e dentro dela temos outro dicionário, onde temos o tempo gasto para o manejo de cada floresta. Para acessar os dados, buscamos primeiro pela chave 1, e depois a chave 2, da seguinte maneira: `tempo_por_manejo['tempo'['pinus']`, esse código irá retornar `2`, que é a quantidade de dias dedicado ao manejo do gênero pinus.
+
+### Importar bibliotecas
+
+```{python}
+import pyomo.environ as pyo # <1>
+```
+
+1.  A biblioteca de otimização que iremos usar é o *Pyomo*. Usamos um "alias" para importar todos os módulos da biblioteca, assim podemos acessar as funções e métodos diretamente chamando `pyo`. Por exemplo, chamamos `pyo.ConcreteModel()` para criar um modelo em branco.
+
+### Importar e definir solver
+
+```{python}
+# o executável foi instalado via terminal e o python consegue encontrá-lo nativamente
+solver = pyo.SolverFactory("glpk")
+
+# o executável foi baixado no computador
+# caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
+# solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
+```
+
+### Declarar modelo
+
+```{python}
+modelo = pyo.ConcreteModel() # <1>
+```
+
+1.  Antes de iniciar a declaração das informações do modelo, primeiro precisamos criar a "caixa" que vai receber todas as informações, nosso modelo propriamente dito. Para isso, usamos a função `ConcreteModel` da biblioteca Pyomo. A partir de agora, cada informação que queremos adicionar no modelo, será referenciada usando o nome "modelo", que foi o que usamos para o objeto que recebeu o resultado da função.
+
+### Variáveis de decisão
+
+```{python}
+modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals) # <1>
+
+modelo.x2_area_nativa = pyo.Var(  # <2>
+  within=pyo.NonNegativeReals   # <3>
+) 
+
+```
+
+1.  Para definição das variáveis de decisão, usamos a função `Var`. Perceba que aqui já estamos adicionando informações dentro do nosso objeto `modelo` criado na etapa anterior. Por questões didáticas, vamos chamar a variável $x_1$ de "x1_area_pinus", mas ela poderia ter qualquer outro nome, como apenas "x1".
+2.  A variável $x_2$ segue a mesma lógica e padrão. A diferença aqui é que demos outro nome para ela, assim criando duas variáveis de decisão dentro do modeo.
+3.  Para ambas, utilizamos o argumento `within` para definir que as variáveis são do domínio de valores reais não negativos. Ou seja, podemos ter valores quebrados de área como solução do modelo, pois é possível manejar 30.5 hectares, por exemplo. Mas não é possível manejar uma área negativa. Temos outras opções para esse argumento, como `Binary`, para variáveis de decisão que podem ser apenas 0 ou 1, todavia, essa opção não faz sentido aqui.
+
+### Declarar função objetivo
+
+```{python}
+modelo.fo_z_receita = pyo.Objective(     # <1>
+  expr = 
+  receita['pinus'] * modelo.x1_area_pinus +  # <2>
+  receita['nativa'] * modelo.x2_area_nativa,     # <3>
+  sense = pyo.maximize # <4>
+)
+```
+
+1.  A função objetivo no Pyomo é definida pela função `Objective`, que pode receber uma *function* em python (que será abordada em outros capítulos) ou a expressão direta que representa nosso objetivo ($90x_1 + 120x_2$)
+2.  Aqui estamos representando o primeiro argumento ( $90x_1$ ), acessando o valor de 90 R\$/ha/ano com o código `receita['pinus']`, e multiplicando pela variável $x_1$, acessando a variável de decisão do modelo com `modelo.x1_area_pinus`
+3.  Repetimos a mesma estrutura agora para a receita da nativa, acessando o dicionário `receita['nativa']` temos os 120 R\$/ha/ano, e multipliocando pela variável `modelo.x2_area_nativa,` temos nossa segunad parte da função objetivo: $120x_2$
+4.  Finalizamos informando o Pyomo de qual direção de otimização (argumento `sense`) queremos seguir, nesse caso queremos maximizar nossa receita, para isso usamos o método `pyo.maximize`
+
+### Declarar restrições
+
+#### Área máxima para a floresta de pinus
+
+```{python}
+modelo.restricao_area_pinus = pyo.Constraint(     # <1>
+  expr=modelo.x1_area_pinus <= area_max['pinus']  # <2>
+)
+```
+
+1.  Seguindo a lógica da restrição anterior, aqui criamos um novo item chamado `restricao_area_nativas`.
+2.  Para escrever a restrição, a única coisa que precisamos mudar em relação à primeira, é a variável de decisão desejada e o item que queremos do dicionário: `modelo.x2_area_nativa` e `area_max['nativa']`, respectivamente. Esse último sendo a forma que optamos para representar o valor de 50 hectares de limite para a floresta nativa.
+
+#### Área máxima para a floresta nativa
+
+```{python}
+modelo.restricao_area_nativas = pyo.Constraint(       # <1>
+  expr=modelo.x2_area_nativa <= area_max['nativa']    # <2>
+)
+```
+
+1.  Seguindo a lógica da restrição anterior, aqui criamos um novo item chamado `restricao_area_nativas`.
+2.  Para escrever a restrição, a única coisa que precisamos mudar em relação à primeira, é a variável de decisão desejada e o item que queremos do dicionário: `modelo.x2_area_nativa` e `area_max['nativa']`, respectivamente. Esse último sendo a forma que optamos para representar o valor de 50 hectares de limite para a floresta nativa.
+
+#### Tempo limite de manejo cada floresta
+
+```{python}
+modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
+  expr= 
+  tempo_por_manejo['tempo']['pinus'] * modelo.x1_area_pinus + # <2>
+  tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa  # <3>
+  <= recurso_max['tempo']                                     # <4>
+)
+```
+
+1.  Primeiro criamos o item restricao_tempo_disp dentro do modelo
+2.  Dentro da função, iremos representar a primeira parte da equação: $2x_1 + 3x_2 \leq 180$. O código `tempo_por_manejo['tempo']['pinus']` obtém o valor `2`, e a operação de multiplicação com `modelo.x1_area_pinus`, fecha a expressão $2x_1$
+3.  Agora representamos o $3x_2$, com o código `tempo_por_manejo['tempo']['nativa']` obtemos o valor `3`, e para representar a variável de decisão $x_2$, usamos `modelo.x2_area_nativa`
+4.  Finalizamos a equação usando o mesmo sinal da matemática - o símbolo de menor ou igual - e acessamos o valor de 180 dias diretamente do dicionário `recurso_max` usando a *key* `'tempo'`
+
+### Resolver modelo
+
+```{python}
+# dando uma olhada na construção do modelo
+modelo.pprint()
+```
+
+
+```{python}
+# usando o solver para resolver o modelo
+resultado = solver.solve(modelo)
+```
+
+### Exportar resultados
+
+```{python}
+# resultados brutos do modelo
+resultado.write
+```
+
+```{python}
+# resultados organizados
+print("\n===== RESULTADOS DO MODELO =====")
+print(f"Status da otimização: {resultado.solver.status}")
+print(f"Condição de término: {resultado.solver.termination_condition}")
+print(f"Receita máxima (z) = R${pyo.value(modelo.fo_z_receita):.2f}")
+print(f"Área manejada de Pinus (x1) = {modelo.x1_area_pinus.value:.2f} hectares")
+print(f"Área manejada de Nativa (x2) = {modelo.x2_area_nativa.value:.2f} hectares")
+```
+
+```{python}
+modelo.write('modelo.mps', io_options={"symbolic_solver_labels": True})
+```

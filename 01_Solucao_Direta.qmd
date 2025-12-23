@@ -293,7 +293,7 @@ df_total = df_resultados.select([
 df_resultados = pl.concat([df_resultados, df_total])
 
 gt = (
-    GT(df_resultados.to_pandas())
+    GT(df_resultados)
     .tab_header(
         title="Resultados do modelo",
         subtitle="Área manejada e receita anual por floresta"

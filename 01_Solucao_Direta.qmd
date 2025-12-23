@@ -10,10 +10,9 @@ format:
     self-contained: true
     code-fold: false     # <<<<<<<<<< SEMPRE MOSTRAR OS CÓDIGOS
     code-tools: true     # (opcional) botões p/ copiar
-    # code-annotations: below
+    code-annotations: below
+    # code-annotations: hover
     number-sections: true
-code-annotations: below
-# code-annotations: hover
 author: Maykon Pedro
 date: last-modified
 ---
@@ -83,7 +82,7 @@ Após, precisamos checar no enunciado que há uma restrição de tempo máximo d
 2x_1 + 3x_2 \leq 180
 $$
 
-Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas: 
+Para finalizar, devemos definir uma restrição que impeça o modelo de manejar áreas negativas:
 
 $$
 \begin{align*}
@@ -216,10 +215,19 @@ modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
 ### Resolver modelo
 
 ```{python}
+#| output: false
 # dando uma olhada na construção do modelo
-modelo.pprint()
+modelo.pprint() # <1>
 ```
 
+1.  Para esse comando em específico, tomei a liberdade de editar uma imagem para tornar mais didática a saída do console. Precisamos entender que essa função permite ver todas as informações contidas no nosso objeto `modelo`, e que isso só é possível por se tratar de um modelo extremamente pequeno e controlado, uma situação real em produção tornaria inviável a leitura desse output.
+
+![](modelo_pprint.svg){fig-align="center"}
+
+1.  Variáveis de decisão declaradas dentro do modelo: $x_1$ e $x_2$. Aqui elas ainda não possuem nenhum valor, pois cabe ao modelo decidir quais valores elas terão. Também podemos checar que cada variável está apontando para seu domínio númerico: valores reais não negativos (*NonNegativeReals*)
+2.  Função objetivo, com o método de otimização e a função em si, que é a mesma que definimos com a função `Objetive`
+3.  Cada restrição e seus respectivos valores, nesse caso, três restrições. Também podemos notar que todas estão ativas (*Actives*), pois toda restrição tem por padrão esse status depois de criada. Poderíamos desativar alguma das restrições caso fosse interessante fazê-lo, usando o comando: `modelo.restricao.deactivate()` , um exemplo é a desativação do tempo máximo: `modelo.restricao_tempo_disp.deactivate()`
+4.  Quantidade total de declações realizadas dentro da instância do modelo.
 
 ```{python}
 # usando o solver para resolver o modelo
@@ -233,6 +241,10 @@ resultado = solver.solve(modelo)
 resultado.write
 ```
 
+<!--# ::: panel-tabset -->
+
+## Resultado
+
 ```{python}
 # resultados organizados
 print("\n===== RESULTADOS DO MODELO =====")
@@ -243,6 +255,60 @@ print(f"Área manejada de Pinus (x1) = {modelo.x1_area_pinus.value:.2f} hectares
 print(f"Área manejada de Nativa (x2) = {modelo.x2_area_nativa.value:.2f} hectares")
 ```
 
+
+## Conclusão
+texto
+
+
+## Bônus: Resultado visual com tabela
+
 ```{python}
-modelo.write('modelo.mps', io_options={"symbolic_solver_labels": True})
+#| code-fold: true
+#| code-summary: "Mostar código da tabela"
+import polars as pl # <1>
+from great_tables import GT # <2> 
+
+df_resultados = (
+    pl.DataFrame({
+        "Floresta": ["Pinus", "Nativa"],
+        "Área manejada (ha)": [
+            modelo.x1_area_pinus.value,
+            modelo.x2_area_nativa.value
+        ],
+        "Receita por ha (R$/ha·ano)": [90, 120],
+    })
+    .with_columns(
+        (pl.col("Área manejada (ha)") * pl.col("Receita por ha (R$/ha·ano)"))
+        .alias("Receita anual (R$)")
+    )
+)
+
+df_total = df_resultados.select([
+    pl.lit("Total").alias("Floresta"),
+    pl.col("Área manejada (ha)").sum(),
+    pl.lit(None).alias("Receita por ha (R$/ha·ano)"),
+    pl.col("Receita anual (R$)").sum(),
+])
+
+df_resultados = pl.concat([df_resultados, df_total])
+
+gt = (
+    GT(df_resultados.to_pandas())
+    .tab_header(
+        title="Resultados do modelo",
+        subtitle="Área manejada e receita anual por floresta"
+    )
+    .fmt_number("Área manejada (ha)", decimals=2)
+    .fmt_currency("Receita anual (R$)", currency="BRL")
+)
+
+gt
+```
+
+
+<!--# ::: -->
+
+```{python}
+#| include: false
+# modelo.write('modelo.mps', io_options={"symbolic_solver_labels": True})
 ```

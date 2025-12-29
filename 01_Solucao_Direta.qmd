@@ -124,13 +124,22 @@ import pyomo.environ as pyo # <1>
 
 ### Importar e definir solver
 
+Instalando diretamente do terminal: `uv pip install pyomo highspy`
+
 ```{python}
 # o executável foi instalado via terminal e o python consegue encontrá-lo nativamente
-solver = pyo.SolverFactory("glpk")
+# solver = pyo.SolverFactory("glpk")
 
 # o executável foi baixado no computador
 # caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
 # solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
+
+nome_solver = "appsi_highs"
+SOLVER = pyo.SolverFactory(nome_solver)
+
+assert SOLVER.available(), f"Solver {nome_solver} is not available"
+
+
 ```
 
 ### Declarar modelo
@@ -353,7 +362,7 @@ modelo.pprint() # <1>
 
 ```{python}
 # usando o solver para resolver o modelo
-resultado = solver.solve(
+resultado = SOLVER.solve(
   modelo, 
   tee=True
 )
@@ -387,32 +396,32 @@ texto
 ## Bônus: Resultado visual com tabela
 
 ```{python}
-#| code-fold: true
-#| code-summary: "Mostar código da tabela"
-import polars as pl # <1>
-from great_tables import GT # <2> 
+# | code-fold: true
+# | code-summary: "Mostrar código da tabela"
+# | include: false
+import polars as pl  # <1>
+from great_tables import GT  # <2>
 
-df_resultados = (
-    pl.DataFrame({
+df_resultados = pl.DataFrame(
+    {
         "Floresta": ["Pinus", "Nativa"],
-        "Área manejada (ha)": [
-            modelo.x1_area_pinus.value,
-            modelo.x2_area_nativa.value
-        ],
+        "Área manejada (ha)": [modelo.x1_area_pinus.value, modelo.x2_area_nativa.value],
         "Receita por ha (R$/ha·ano)": [90, 120],
-    })
-    .with_columns(
-        (pl.col("Área manejada (ha)") * pl.col("Receita por ha (R$/ha·ano)"))
-        .alias("Receita anual (R$)")
+    }
+).with_columns(
+    (pl.col("Área manejada (ha)") * pl.col("Receita por ha (R$/ha·ano)")).alias(
+        "Receita anual (R$)"
     )
 )
 
-df_total = df_resultados.select([
-    pl.lit("Total").alias("Floresta"),
-    pl.col("Área manejada (ha)").sum(),
-    pl.lit(None).alias("Receita por ha (R$/ha·ano)"),
-    pl.col("Receita anual (R$)").sum(),
-])
+df_total = df_resultados.select(
+    [
+        pl.lit("Total").alias("Floresta"),
+        pl.col("Área manejada (ha)").sum(),
+        pl.lit(None).alias("Receita por ha (R$/ha·ano)"),
+        pl.col("Receita anual (R$)").sum(),
+    ]
+)
 
 df_resultados = pl.concat([df_resultados, df_total])
 
@@ -420,7 +429,7 @@ gt = (
     GT(df_resultados)
     .tab_header(
         title="Resultados do modelo",
-        subtitle="Área manejada e receita anual por floresta"
+        subtitle="Área manejada e receita anual por floresta",
     )
     .fmt_number("Área manejada (ha)", decimals=2)
     .fmt_currency("Receita anual (R$)", currency="BRL")

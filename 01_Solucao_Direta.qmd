@@ -141,14 +141,33 @@ modelo = pyo.ConcreteModel() # <1>
 
 1.  Antes de iniciar a declaração das informações do modelo, primeiro precisamos criar a "caixa" que vai receber todas as informações, nosso modelo propriamente dito. Para isso, usamos a função `ConcreteModel` da biblioteca Pyomo. A partir de agora, cada informação que queremos adicionar no modelo, será referenciada usando o nome "modelo", que foi o que usamos para o objeto que recebeu o resultado da função.
 
+### Índices
+
+::: callout-note
+## Não iremos utilizar essa seção nesse documento visando a simplificação. Será abordada no modelo com escabilidade
+:::
+
+### Parâmetros
+
+::: callout-note
+## Não iremos utilizar essa seção nesse documento visando a simplificação. Será abordada no modelo com escabilidade
+:::
+
 ### Variáveis de decisão
+
+::: panel-tabset
+## Opção 1 - Padrão
 
 ```{python}
 modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals) # <1>
 
 modelo.x2_area_nativa = pyo.Var(  # <2>
   within=pyo.NonNegativeReals   # <3>
+  # domain=pyo.NonNegativeReals,
 ) 
+
+# inspecionar apenas antes de resolver:
+# modelo.display()
 
 ```
 
@@ -156,10 +175,37 @@ modelo.x2_area_nativa = pyo.Var(  # <2>
 2.  A variável $x_2$ segue a mesma lógica e padrão. A diferença aqui é que demos outro nome para ela, assim criando duas variáveis de decisão dentro do modeo.
 3.  Para ambas, utilizamos o argumento `within` para definir que as variáveis são do domínio de valores reais não negativos. Ou seja, podemos ter valores quebrados de área como solução do modelo, pois é possível manejar 30.5 hectares, por exemplo. Mas não é possível manejar uma área negativa. Temos outras opções para esse argumento, como `Binary`, para variáveis de decisão que podem ser apenas 0 ou 1, todavia, essa opção não faz sentido aqui.
 
-### Declarar função objetivo
+## Opção 2 - Com Limites
+
+Para esse caso, não precisaríamos criar restrições específicas para a área máxima das florestas, visto que na definição das variáveis já estabeleceriamos um limite para o quanto essa área de manejo pode atingir.
+
+Não seguiremos com essa opção para poder reforçar a construção das restrições.
 
 ```{python}
-modelo.fo_z_receita = pyo.Objective(     # <1>
+#| eval: false
+modelo.x1_area_pinus = pyo.Var(
+  bounds= (0, area_max['pinus'])  # <1>
+)
+
+modelo.x2_area_nativa = pyo.Var(
+  bounds= (0, area_max['nativa'])  # <2>
+)
+
+# inspecionar apenas antes de resolver:
+# modelo.display()
+```
+
+1.  aaaa
+2.  bbbb
+:::
+
+### Declarar função objetivo
+
+::: panel-tabset
+#### Opção 1 - Padrão
+
+```{python}
+modelo.receita_total = pyo.Objective(     # <1>
   expr = 
   receita['pinus'] * modelo.x1_area_pinus +  # <2>
   receita['nativa'] * modelo.x2_area_nativa,     # <3>
@@ -172,9 +218,30 @@ modelo.fo_z_receita = pyo.Objective(     # <1>
 3.  Repetimos a mesma estrutura agora para a receita da nativa, acessando o dicionário `receita['nativa']` temos os 120 R\$/ha/ano, e multipliocando pela variável `modelo.x2_area_nativa,` temos nossa segunad parte da função objetivo: $120x_2$
 4.  Finalizamos informando o Pyomo de qual direção de otimização (argumento `sense`) queremos seguir, nesse caso queremos maximizar nossa receita, para isso usamos o método `pyo.maximize`
 
+#### Opção 2 - Decorators
+
+```{python}
+#| eval: false
+@modelo.Objective(sense = pyo.maximize) # <1>
+def receita_total(m):  # <2>
+  receita_pinus = receita['pinus'] * m.x1_area_pinus # <3>
+  receita_nativa = receita['nativa'] * m.x2_area_nativa # <4>
+  return receita_pinus + receita_nativa  # <5>
+```
+
+1.  aaa
+2.  bbb
+3.  ccc
+4.  ddd
+5.  eee
+:::
+
 ### Declarar restrições
 
 #### Área máxima para a floresta de pinus
+
+::: panel-tabset
+##### Opção 1 - Padrão
 
 ```{python}
 modelo.restricao_area_pinus = pyo.Constraint(     # <1>
@@ -185,10 +252,28 @@ modelo.restricao_area_pinus = pyo.Constraint(     # <1>
 1.  Seguindo a lógica da restrição anterior, aqui criamos um novo item chamado `restricao_area_nativas`.
 2.  Para escrever a restrição, a única coisa que precisamos mudar em relação à primeira, é a variável de decisão desejada e o item que queremos do dicionário: `modelo.x2_area_nativa` e `area_max['nativa']`, respectivamente. Esse último sendo a forma que optamos para representar o valor de 50 hectares de limite para a floresta nativa.
 
-#### Área máxima para a floresta nativa
+##### Opção 2 - Decorators
 
 ```{python}
-modelo.restricao_area_nativas = pyo.Constraint(       # <1>
+#| eval: false
+@modelo.Constraint()           # <1>
+def restricao_area_pinus(m):   # <2>
+  return m.x1_area_pinus <= area_max['pinus']  # <3>
+
+```
+
+1.  Estabecendo o uso do decorator com `@modelo`e definindo a função do Pyomo que iremos utilizar
+2.  Criação de uma função python com o nome da nossa restrição que recebe como input um modelo, aqui chamado como \`m\`\`
+3.  A função retorna uma equação que representa a nossa regra estabelecida para essa restrição: primeiro acessa a variável `x1_area_pinus`do nosso modelo `m`, depois faz a lógica da regra de menor ou igual ao nosso valor existente na key `pinus` do nosso dicionário `area_max`
+:::
+
+#### Área máxima para a floresta nativa
+
+::: panel-tabset
+##### Opção 1 - Padrão
+
+```{python}
+modelo.restricao_area_nativa = pyo.Constraint(       # <1>
   expr=modelo.x2_area_nativa <= area_max['nativa']    # <2>
 )
 ```
@@ -196,7 +281,25 @@ modelo.restricao_area_nativas = pyo.Constraint(       # <1>
 1.  Seguindo a lógica da restrição anterior, aqui criamos um novo item chamado `restricao_area_nativas`.
 2.  Para escrever a restrição, a única coisa que precisamos mudar em relação à primeira, é a variável de decisão desejada e o item que queremos do dicionário: `modelo.x2_area_nativa` e `area_max['nativa']`, respectivamente. Esse último sendo a forma que optamos para representar o valor de 50 hectares de limite para a floresta nativa.
 
+##### Opção 2 - Decorators
+
+```{python}
+#| eval: false
+@modelo.Constraint()           # <1>
+def restricao_area_nativa(m):   # <2>
+  return m.x2_area_nativa <= area_max['nativa']  # <3>
+
+```
+
+1.  Estabecendo o uso do decorator com `@modelo`e definindo a função do Pyomo que iremos utilizar
+2.  Criação de uma função python com o nome da nossa restrição que recebe como input um modelo, aqui chamado como \`m\`\`
+3.  A função retorna uma equação que representa a nossa regra estabelecida para essa restrição: primeiro acessa a variável `x2_area_nativa`do nosso modelo `m`, depois faz a lógica da regra de menor ou igual ao nosso valor existente na key `nativa` do nosso dicionário `area_max`
+:::
+
 #### Tempo limite de manejo cada floresta
+
+::: panel-tabset
+##### Opção 1 - Padrão
 
 ```{python}
 modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
@@ -205,12 +308,31 @@ modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
   tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa  # <3>
   <= recurso_max['tempo']                                     # <4>
 )
+          
 ```
 
 1.  Primeiro criamos o item restricao_tempo_disp dentro do modelo
 2.  Dentro da função, iremos representar a primeira parte da equação: $2x_1 + 3x_2 \leq 180$. O código `tempo_por_manejo['tempo']['pinus']` obtém o valor `2`, e a operação de multiplicação com `modelo.x1_area_pinus`, fecha a expressão $2x_1$
 3.  Agora representamos o $3x_2$, com o código `tempo_por_manejo['tempo']['nativa']` obtemos o valor `3`, e para representar a variável de decisão $x_2$, usamos `modelo.x2_area_nativa`
 4.  Finalizamos a equação usando o mesmo sinal da matemática - o símbolo de menor ou igual - e acessamos o valor de 180 dias diretamente do dicionário `recurso_max` usando a *key* `'tempo'`
+
+##### Opção 2 - Decorators
+
+```{python}
+#| eval: false
+@modelo.Constraint() # <1>
+def restricao_tempo_disp(m):  # <2>
+  tempo_pinus = tempo_por_manejo['tempo']['pinus'] * m.x1_area_pinus  # <3>
+  tempo_nativa = tempo_por_manejo['tempo']['nativa'] * m.x2_area_nativa # <4>
+  return tempo_pinus + tempo_nativa  <= recurso_max['tempo'] # <5> 
+```
+
+1.  fffeeeecccbbbaaaa
+2.  aaa
+3.  aa
+4.  aaa
+5.  aaa
+:::
 
 ### Resolver modelo
 
@@ -231,7 +353,10 @@ modelo.pprint() # <1>
 
 ```{python}
 # usando o solver para resolver o modelo
-resultado = solver.solve(modelo)
+resultado = solver.solve(
+  modelo, 
+  tee=True
+)
 ```
 
 ### Exportar resultados
@@ -250,15 +375,14 @@ resultado.write
 print("\n===== RESULTADOS DO MODELO =====")
 print(f"Status da otimização: {resultado.solver.status}")
 print(f"Condição de término: {resultado.solver.termination_condition}")
-print(f"Receita máxima (z) = R${pyo.value(modelo.fo_z_receita):.2f}")
+print(f"Receita máxima (z) = R${pyo.value(modelo.receita_total):.2f}")
 print(f"Área manejada de Pinus (x1) = {modelo.x1_area_pinus.value:.2f} hectares")
 print(f"Área manejada de Nativa (x2) = {modelo.x2_area_nativa.value:.2f} hectares")
 ```
 
-
 ## Conclusão
-texto
 
+texto
 
 ## Bônus: Resultado visual com tabela
 
@@ -304,7 +428,6 @@ gt = (
 
 gt
 ```
-
 
 <!--# ::: -->
 

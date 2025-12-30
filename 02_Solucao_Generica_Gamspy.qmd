@@ -1,0 +1,128 @@
+---
+title: "Solução Genérica - Gamspy"
+format: html
+---
+
+## 0. Dados de entrada
+
+```{python}
+
+```
+
+## 1. Importar bibliotecas
+
+```{python}
+import gamspy as gams
+```
+
+## 2. Importar e definir solver
+
+```{python}
+
+```
+
+## 3. Declarar modelo
+
+No GAMSPy começamos declarando um conteiner para receber todas as informações do modelo, análogo ao `ConcreteModel` do Pyomo.
+
+```{python}
+m = gams.Container()
+```
+
+## 4. Declarar índices, parâmetros e variáveis de decisão
+
+### 4.1 Índices (Sets)
+
+Os sets são iguais aos conjuntos de índices do Pyomo, sendo diretamente relacionados às representações algébricas construídas na modelagem do problema. Para esse exercício, temos os seguinte conjuntos:
+
+-   Set $i$ = recursos disponíveis (apenas o tempo)
+
+-   Set $j$ = florestas a serem manejadas (nativa e plantada)
+
+```{python}
+i = gams.Set(container=m, name="i", description="recursos disponíveis")
+j = gams.Set(container=m, name="j", description="florestas")
+
+# i.name
+# j.name
+```
+
+### 4.2 Parâmetros
+Os parâmetros seguem com uma estrutura semelhante ao Pyomo, com a diferença que aqui alocamos qual o domínio direto (conjunto que ele se relaciona) e podemos fornecer uma descrição.
+
+```{python}
+c = gams.Parameter(
+  container=m,
+  name="c",
+  domain=j,
+  description="receita de cada hectare de uma floresta j"
+)
+
+max_area = gams.Parameter(
+  container=m,
+  name="max_area",
+  domain=j,
+  description="área máxima disponível da floresta j"
+)
+
+a = gams.Parameter(
+  container=m, 
+  name="a", 
+  domain=[i,j], 
+  description="quantidade de recurso exigida para o manejo da floresta j"
+)
+
+b = gams.Parameter(
+  container=m,
+  name="b",
+  domain=i,
+  description="quantidade total disponível do recurso i"
+)
+
+```
+
+### 4.3 Variáveis de decisão
+
+```{python}
+x = gams.Variable(
+  container=m,
+  name="x",
+  domain=j,
+  type="Positive",
+  description="hectares de floresta j a ser manejado"
+)
+```
+
+## 5. Declarar função objetivo
+
+```{python}
+obj = gams.Sum(j, c[j] * x[j])
+```
+
+## 6. Declarar restrições
+
+```{python}
+area_maxima = gams.Equation(
+  container=m,
+  name="area_maxima",
+  domain=j,
+  description="área máxima para cada floresta"
+)
+
+tempo_limite = gams.Equation(
+  container=m,
+  name="tempo_limite",
+  domain=[i,j],
+  description="limite máximo do recurso j"
+)
+```
+
+```{python}
+
+area_maxima[j] = x[j] <= max_area[j]
+tempo_limite[i] = gams.Sum(j, a[i,j] * x[j]) <= b[i]
+
+```
+## 7. Resolver modelo
+
+## 8. Exportar resultados

@@ -19,7 +19,15 @@ date: last-modified
 
 ## Introdução
 
-Nesse primeiro documento o problema será resolvido de maneira simplificada, alocando cada valor e restrição diretamente no código, sem pensar em escalonamento dos dados ou formulação genérica.
+Esse texto não tem como pretensão ensinar uma linguagem de programação do zero, tão menos conceitos de Pesquisa Operacional. Contudo, a proposta aqui é ser o mais didático possível dentro do universo da PO usando a biblioteca Pyomo do Python, principalmente aplicado às Ciências Florestais, aproveitando todas as possibilidades que o [Quarto](https://quarto.org/) permite na construção de documentos para auxiliar no entendimento do texto.
+
+A ideia surgiu após a constatação de que atualmente não temos nem de perto a quantidade de material sobre Pyomo em Português se compararmos com o idioma dominante na ciência: Inglês. Considerando que pra muitos essa pode ser uma barreira inicial que só tornará a experiência mais difícil, espero que esse material possa agregar na jordada de aprendizado de quem busca aprender mais sobre o assunto.
+
+Pensando em conectar com minha área de atuação, o problema aqui exposto foi extraído da excelente apostila **Programação Linear para Fins Florestais**, do professor Julio Eduardo Arce (UFPR). O capítulo que descreve o problema do Poeta pode ser acessado no seguinte link: [capítulo](https://github.com/maykongpedro/PO_O_Problema_Do_Poeta/blob/main/docs/Apostila_PO_Julio_Arce_Cap1_O_Problema_do_Poeta.pdf). Recomendo a leitura, principalmente para aqueles que não tem familiaridade com o tema. Nesse documento o problema será resolvido de maneira simplificada, alocando cada valor e restrição diretamente no código, sem pensar em escalonamento dos dados ou formulação genérica, visando descomplicar alguns conceitos.
+
+Em relação à biblioteca do Pyomo, as práticas utilizadas nesse projeto usam como fonte as boas práticas descritas no livro [Hands-On Mathematical Optimization with Python](https://mobook.github.io/MO-book/intro.html#). Considero esse um dos melhores materias gratuitos disponíveis sobre o tema (infelizmente apenas em inglês).
+
+De resto, agradeço aos meus colegas e amigos que revisaram o texto, me ajudando com dicas úteis sobre onde detalhar ou sobre onde simplificar algumas coisas. Aos leitores: sim, esse é um problema simples, e a ideia é justamente focar em *como* resolver ele usando uma ferramenta poderosa como o Pyomo, porque uma vez compreendido as noções básicas, os problemas resolvidos em Python podem crescer muito além do que um Excel conseguiria resolver.
 
 ## Descrição do problema
 
@@ -48,7 +56,15 @@ Todos os valores foram convertidos para a base **hectare por ano (ha·ano)**, fa
 
 ### Índices/Conjuntos
 
+::: callout-note
+## Não iremos utilizar essa seção nesse documento visando a simplificação. Será abordada no modelo com escabilidade
+:::
+
 ### Parâmetros
+
+::: callout-note
+## Não iremos utilizar essa seção nesse documento visando a simplificação. Será abordada no modelo com escabilidade
+:::
 
 ### Variáveis de decisão
 
@@ -106,17 +122,25 @@ area_max = {"pinus": 40, "nativa": 50} # <2>
 recurso_max = {"tempo": 180} # <3>
 
 # dicionário para controle do tempo gasto de manejo por floresta no ano
-tempo_por_manejo = {"tempo": {"pinus": 2, "nativa": 3}} # <4>
+tempo_por_manejo = {"pinus": 2, "nativa": 3} # <4>
 ```
 
-1.  No Python, temos diversas maneiras de importar e trabalhar com os dados. Para facilitar nosso trabalho com a biblioteca de otimização (*pyomo*), iremos usar uma forma de dados essencial do Python: o dicionário. Aqui, o que estamos fazendo é basicamente uma lista que relaciona uma chave (key) x uma informação. A chave `pinus` irá trazer o valor `90`, por exemplo. Podemos acessar ela com `receita['pinus']`
+1.  No Python, temos diversas maneiras de importar e trabalhar com os dados. Para facilitar nosso trabalho com a biblioteca de otimização (*pyomo*), iremos usar uma forma de dados essencial do Python: o **dicionário**. Aqui, o que estamos fazendo é basicamente uma lista que relaciona uma chave (key) x uma informação. A chave `pinus` irá trazer o valor `90`, por exemplo. Podemos acessar ela com o código `receita['pinus']`
 2.  Na área máxima, a ideia é a mesma, a *key* (chave) `pinus` irá trazer o valor `40`, ou seja, 40 hectares é a área máxima da floresta de pinus.
 3.  Para o recurso, a *key* `tempo` irá trazer o valor referente aos `180` dias.
-4.  Nosso último dicionário de dados possui uma segunda camada, onde acessamos a *key* `tempo`, e dentro dela temos outro dicionário, onde temos o tempo gasto para o manejo de cada floresta. Para acessar os dados, buscamos primeiro pela chave 1, e depois a chave 2, da seguinte maneira: `tempo_por_manejo['tempo'['pinus']`, esse código irá retornar `2`, que é a quantidade de dias dedicado ao manejo do gênero pinus.
+4.  Nosso último dicionário segue a mesma estrutura dos anteriores. Com o código `tempo_por_manejo['pinus']` acessamos o valor de 2 dias por hectare/ano, e usando a chave `nativa`, obtemos os 3 dias por hectare/ano.
+
+::: column-margin
+Os blocos de código nesse artigo irão possuir etapas numeradas explicando detalhamente das etapas realizadas. Esse é uma das vantagens de escrever esse documennto em Quarto.
+:::
 
 ### Importar bibliotecas
 
 ```{python}
+# instalar a biblioteca
+# pip install pyomo
+
+# importar biblioteca
 import pyomo.environ as pyo # <1>
 ```
 
@@ -124,23 +148,47 @@ import pyomo.environ as pyo # <1>
 
 ### Importar e definir solver
 
-Instalando diretamente do terminal: `uv pip install pyomo highspy`
+Iremos precisar definir um Solver para resolver o problema. O solver pode ser instalado via terminal ou pode ser acessado por um executável. O Solver escolhido é o [HIGHS](https://highs.dev/) - *open source* e muito eficiente. Contudo, poderia ser qualquer outro, seja gratuito (gplk, cbc) ou uma versão comercial (gurobi , cplex).
+
+O código abaixo deixa um exemplo para o caso onde usamos o executável de um solver, usando o CBC como referência.
+
+::: panel-tabset
+#### Importação direta (HIGHS)
 
 ```{python}
-# o executável foi instalado via terminal e o python consegue encontrá-lo nativamente
-# solver = pyo.SolverFactory("glpk")
 
-# o executável foi baixado no computador
-# caminho_do_executavel = "C:/Users/klmp00145394/Documents/glpk-4.65/w64/glpsol.exe"
-# solver = pyo.SolverFactory(_name="glpk", executable=caminho_do_executavel)
+# instalação do solver
+# pip install pyomo highspy
 
-nome_solver = "appsi_highs"
-SOLVER = pyo.SolverFactory(nome_solver)
-
-assert SOLVER.available(), f"Solver {nome_solver} is not available"
-
+nome_solver = "appsi_highs"               # <1>
+SOLVER = pyo.SolverFactory(nome_solver)   # <2>
+assert SOLVER.available(), f"Solver {nome_solver} is not available"  # <3>
 
 ```
+
+1.  Definimos o nome estrutural do solver dentro do python (aqui usamos o 'appsi_hights' pois ele possui uma interface mais atual, contudo, poderiamos usar o nome 'hights')
+2.  Estabelecemos para o pyomo que o solver utilizado será o que salvamos na variável `nome_solver`
+3.  Fazemos uma validação para entender se o solver está disponível no nosso sistema
+
+#### Importação por executável (CBC)
+
+```{python}
+#| eval: false
+
+# o executável existe dentro da pasta do projeto
+caminho_do_executavel = "solvers/cbc.exe" # <1>
+SOLVER = pyo.SolverFactory(
+  _name="cbc",                        # <2>
+  executable=caminho_do_executavel    # <3>
+)
+
+assert SOLVER.available(), f"Solver {nome_solver} is not available"
+```
+
+1.  Definimos o caminho do executável do solver em uma variável
+2.  Estabelecemos o nome do solver no argumento `_name`, igual ao método de importação direta
+3.  A diferença acontece no argumento `executable`, que recebe a variável que contém o caminho do solver.
+:::
 
 ### Declarar modelo
 
@@ -168,25 +216,21 @@ modelo = pyo.ConcreteModel() # <1>
 ## Opção 1 - Padrão
 
 ```{python}
-modelo.x1_area_pinus = pyo.Var(within=pyo.NonNegativeReals) # <1>
+modelo.x1_area_pinus = pyo.Var(domain=pyo.NonNegativeReals) # <1>
 
 modelo.x2_area_nativa = pyo.Var(  # <2>
-  within=pyo.NonNegativeReals   # <3>
-  # domain=pyo.NonNegativeReals,
+  domain=pyo.NonNegativeReals   # <3>
 ) 
-
-# inspecionar apenas antes de resolver:
-# modelo.display()
 
 ```
 
 1.  Para definição das variáveis de decisão, usamos a função `Var`. Perceba que aqui já estamos adicionando informações dentro do nosso objeto `modelo` criado na etapa anterior. Por questões didáticas, vamos chamar a variável $x_1$ de "x1_area_pinus", mas ela poderia ter qualquer outro nome, como apenas "x1".
 2.  A variável $x_2$ segue a mesma lógica e padrão. A diferença aqui é que demos outro nome para ela, assim criando duas variáveis de decisão dentro do modeo.
-3.  Para ambas, utilizamos o argumento `within` para definir que as variáveis são do domínio de valores reais não negativos. Ou seja, podemos ter valores quebrados de área como solução do modelo, pois é possível manejar 30.5 hectares, por exemplo. Mas não é possível manejar uma área negativa. Temos outras opções para esse argumento, como `Binary`, para variáveis de decisão que podem ser apenas 0 ou 1, todavia, essa opção não faz sentido aqui.
+3.  Para ambas, utilizamos o argumento `domain` para definir que as variáveis são do domínio de valores reais não negativos. Ou seja, podemos ter valores quebrados de área como solução do modelo, pois é possível manejar 30.5 hectares, por exemplo. Mas não é possível manejar uma área negativa. Temos outras opções para esse argumento, como `Binary`, para variáveis de decisão que podem ser apenas 0 ou 1, todavia, essa opção não faz sentido aqui.
 
 ## Opção 2 - Com Limites
 
-Para esse caso, não precisaríamos criar restrições específicas para a área máxima das florestas, visto que na definição das variáveis já estabeleceriamos um limite para o quanto essa área de manejo pode atingir.
+Para esse caso, não precisaríamos criar restrições específicas para a área máxima das florestas, visto que na definição das variáveis já estabeleceríamos um limite para o quanto essa área de manejo pode atingir.
 
 Não seguiremos com essa opção para poder reforçar a construção das restrições.
 
@@ -200,12 +244,10 @@ modelo.x2_area_nativa = pyo.Var(
   bounds= (0, area_max['nativa'])  # <2>
 )
 
-# inspecionar apenas antes de resolver:
-# modelo.display()
 ```
 
-1.  aaaa
-2.  bbbb
+1.  A principal diferença para a opção 1 é que agora usamos o argumento `bounds`, onde definimos que o menor valor possível para essa variável é 0, e o maior valor é o número contido no dicionário `area_max['pinus']`, 40 hectares. Com isso aumaticamente já restringimos o máximo que a variável $x_1$ pode alcançar, e qual o domínio dela.
+2.  A lógica é igual: não posso manejar áreas menores que 0, e não posso manejar mais que 50 ha de floresta nativa (resultado do dicionário `area_max['nativa']`)
 :::
 
 ### Declarar função objetivo
@@ -222,9 +264,9 @@ modelo.receita_total = pyo.Objective(     # <1>
 )
 ```
 
-1.  A função objetivo no Pyomo é definida pela função `Objective`, que pode receber uma *function* em python (que será abordada em outros capítulos) ou a expressão direta que representa nosso objetivo ($90x_1 + 120x_2$)
+1.  A função objetivo no Pyomo é definida pela função `Objective`, que pode receber uma *function* em python ou a expressão direta que representa nosso objetivo ($90x_1 + 120x_2$)
 2.  Aqui estamos representando o primeiro argumento ( $90x_1$ ), acessando o valor de 90 R\$/ha/ano com o código `receita['pinus']`, e multiplicando pela variável $x_1$, acessando a variável de decisão do modelo com `modelo.x1_area_pinus`
-3.  Repetimos a mesma estrutura agora para a receita da nativa, acessando o dicionário `receita['nativa']` temos os 120 R\$/ha/ano, e multipliocando pela variável `modelo.x2_area_nativa,` temos nossa segunad parte da função objetivo: $120x_2$
+3.  Repetimos a mesma estrutura agora para a receita da nativa, acessando o dicionário `receita['nativa']` temos os 120 R\$/ha/ano, e multiplicando pela variável `modelo.x2_area_nativa,` temos nossa segunda parte da função objetivo: $120x_2$
 4.  Finalizamos informando o Pyomo de qual direção de otimização (argumento `sense`) queremos seguir, nesse caso queremos maximizar nossa receita, para isso usamos o método `pyo.maximize`
 
 #### Opção 2 - Decorators
@@ -313,16 +355,16 @@ def restricao_area_nativa(m):   # <2>
 ```{python}
 modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
   expr= 
-  tempo_por_manejo['tempo']['pinus'] * modelo.x1_area_pinus + # <2>
-  tempo_por_manejo['tempo']['nativa'] * modelo.x2_area_nativa  # <3>
+  tempo_por_manejo['pinus'] * modelo.x1_area_pinus + # <2>
+  tempo_por_manejo['nativa'] * modelo.x2_area_nativa  # <3>
   <= recurso_max['tempo']                                     # <4>
 )
           
 ```
 
 1.  Primeiro criamos o item restricao_tempo_disp dentro do modelo
-2.  Dentro da função, iremos representar a primeira parte da equação: $2x_1 + 3x_2 \leq 180$. O código `tempo_por_manejo['tempo']['pinus']` obtém o valor `2`, e a operação de multiplicação com `modelo.x1_area_pinus`, fecha a expressão $2x_1$
-3.  Agora representamos o $3x_2$, com o código `tempo_por_manejo['tempo']['nativa']` obtemos o valor `3`, e para representar a variável de decisão $x_2$, usamos `modelo.x2_area_nativa`
+2.  Dentro da função, iremos representar a primeira parte da equação: $2x_1 + 3x_2 \leq 180$. O código `tempo_por_manejo['pinus']` obtém o valor `2`, e a operação de multiplicação com `modelo.x1_area_pinus`, fecha a expressão $2x_1$
+3.  Agora representamos o $3x_2$, com o código `tempo_por_manejo['nativa']` obtemos o valor `3`, e para representar a variável de decisão $x_2$, usamos `modelo.x2_area_nativa`
 4.  Finalizamos a equação usando o mesmo sinal da matemática - o símbolo de menor ou igual - e acessamos o valor de 180 dias diretamente do dicionário `recurso_max` usando a *key* `'tempo'`
 
 ##### Opção 2 - Decorators
@@ -331,8 +373,8 @@ modelo.restricao_tempo_disp = pyo.Constraint(                # <1>
 #| eval: false
 @modelo.Constraint() # <1>
 def restricao_tempo_disp(m):  # <2>
-  tempo_pinus = tempo_por_manejo['tempo']['pinus'] * m.x1_area_pinus  # <3>
-  tempo_nativa = tempo_por_manejo['tempo']['nativa'] * m.x2_area_nativa # <4>
+  tempo_pinus = tempo_por_manejo['pinus'] * m.x1_area_pinus  # <3>
+  tempo_nativa = tempo_por_manejo['nativa'] * m.x2_area_nativa # <4>
   return tempo_pinus + tempo_nativa  <= recurso_max['tempo'] # <5> 
 ```
 
